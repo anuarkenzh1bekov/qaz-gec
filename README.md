@@ -1,4 +1,4 @@
-# mini-kazakhllm — Kazakh error correction
+# QazGEC — Qazaq Grammatical Error Correction
 
 Fine-tune a small seq2seq model (**google/umt5-base**) to correct spelling/grammar
 errors in Kazakh text. Training must fit one GPU (RTX 5070, 12 GB) in ≤ 3 hours.
