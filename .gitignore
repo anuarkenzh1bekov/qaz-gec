@@ -1,0 +1,19 @@
+.env
+.openai_key
+__pycache__/
+
+# Heavy / regenerable data — keep out of git.
+data/raw/
+data/interim/
+# ~90MB merged training set, rebuildable
+data/processed/train.jsonl
+
+# Everything else in data/processed/ (val + frozen eval sets) IS tracked:
+# test_real.jsonl is GPT-generated at temperature=1.0, so it can't be
+# reproduced identically — freeze it in git.
+
+# Notebook / training outputs
+notebooks/.ipynb_checkpoints/
+checkpoints/
+runs/
+*.ckpt
