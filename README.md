@@ -60,6 +60,24 @@ mostly leaves already-clean text unchanged (~78% of clean inputs untouched).
 Raw `umt5-small` can't correct at all — it's a span-fill pretrain and emits
 garbage (`......`). The whole skill comes from fine-tuning.
 
+### Edit-level metrics (`test_real`, 120 sentences, beam search)
+
+Char-accuracy is coarse; for correction what matters is how much closer the output
+gets to the target and how many sentences actually improve.
+
+| metric | before (input) | after (model) |
+|---|---|---|
+| avg char edit-distance to target | 37.07 | **19.38** |
+| word-level accuracy | 0.463 | **0.658** |
+| **error reduction** | — | **47.7%** |
+
+Per-sentence outcome: **improved 88.3%** (106/120), unchanged 7.5%, **worse 4.2%** (5/120).
+
+The model roughly halves the distance to the correct sentence and improves 88% of
+inputs while breaking only 4%. The low exact-match (0.083) is expected — one leftover
+error in a long sentence zeroes it — so edit-distance and improvement rate are the
+honest signals here.
+
 **Before vs after, same input:**
 
 | input (noisy) | raw | fine-tuned | target |
