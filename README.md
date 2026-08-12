@@ -13,9 +13,31 @@ data/
                val.jsonl                                 # synthetic held-out, for monitoring
                test_real.jsonl                           # held-out, GPT-noised — "before vs after"
                test_regression.jsonl                     # clean held-out — "what it cost"
-scripts/       dataset builders (see pipeline below)
-notebooks/     training notebook (train.ipynb) — created separately
+scripts/       dataset builders (see pipeline below) + train.py, infer.py
+notebooks/     train_qazqec.ipynb — exploratory training notebook
+models/        umt5-gec-fixed/best — trained model (gitignored)
 ```
+
+## ⚠️ Requirement: transformers < 5
+
+Use **transformers 4.57.x** (see `requirements.txt`). transformers **5.x ships a
+broken UMT5 decoder causal mask** — future decoder tokens leak into past positions,
+so the model trains to "cheat" (teacher-forced loss collapses to ~0.017) but emits
+pure garbage at generation time. This is a library bug, not a modeling issue; on
+4.57.6 the mask is correct (verified: Δ=0 when future tokens change).
+
+## Train / infer
+
+```bash
+pip install -r requirements.txt
+python scripts/train.py          # ~2h on RTX 5070; saves models/umt5-gec-fixed/best
+python scripts/infer.py "мәтінді осында жаз"
+```
+
+Config: umt5-base, MAX_LENGTH 128, eff. batch 32 (bs 8 × accum 4), Adafactor,
+lr 3e-4, bf16, 1 epoch, `tie_word_embeddings=False` (umt5 is untied — keeps the
+trained lm_head on reload). Result: **eval_loss 0.106**, generation fixes errors
+and leaves already-clean text unchanged.
 
 ## Data pipeline
 

@@ -17,3 +17,6 @@ notebooks/.ipynb_checkpoints/
 checkpoints/
 runs/
 *.ckpt
+
+# Trained model weights (large)
+models/

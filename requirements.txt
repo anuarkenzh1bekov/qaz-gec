@@ -1,0 +1,10 @@
+# QazGEC — pinned deps.
+# CRITICAL: transformers must be < 5. transformers 5.x ships a broken UMT5
+# decoder causal mask (future tokens leak into past positions), so the model
+# trains to "cheat" (near-zero loss) but produces garbage at generation time.
+transformers==4.57.6
+torch>=2.11
+datasets
+sentencepiece
+accelerate
+pandas
