@@ -1,7 +1,7 @@
 # QazGEC — Qazaq Grammatical Error Correction
 
-Fine-tune a small seq2seq model (**google/umt5-base**) to correct spelling/grammar
-errors in Kazakh text. Training must fit one GPU (RTX 5070, 12 GB) in ≤ 3 hours.
+Fine-tune a small seq2seq model (**google/umt5-small**) to correct spelling/grammar
+errors in Kazakh text. Training fits one GPU (RTX 5070, 12 GB) in ~2 hours.
 
 ## Layout
 
@@ -13,8 +13,8 @@ data/
                val.jsonl                                 # synthetic held-out, for monitoring
                test_real.jsonl                           # held-out, GPT-noised — "before vs after"
                test_regression.jsonl                     # clean held-out — "what it cost"
-scripts/       dataset builders (see pipeline below) + train.py, infer.py
-notebooks/     train_qazqec.ipynb — exploratory training notebook
+scripts/       dataset builders (see pipeline below)
+notebooks/     train_qazqec.ipynb — training + inference notebook
 models/        umt5-gec-fixed/best — trained model (gitignored)
 ```
 
@@ -30,14 +30,12 @@ pure garbage at generation time. This is a library bug, not a modeling issue; on
 
 ```bash
 pip install -r requirements.txt
-python scripts/train.py          # ~2h on RTX 5070; saves models/umt5-gec-fixed/best
-python scripts/infer.py "мәтінді осында жаз"
+jupyter lab notebooks/train_qazqec.ipynb   # train + inference; saves models/umt5-gec-fixed/best
 ```
 
-Config: umt5-base, MAX_LENGTH 128, eff. batch 32 (bs 8 × accum 4), Adafactor,
-lr 3e-4, bf16, 1 epoch, `tie_word_embeddings=False` (umt5 is untied — keeps the
-trained lm_head on reload). Result: **eval_loss 0.106**, generation fixes errors
-and leaves already-clean text unchanged.
+Config: umt5-small, MAX_LENGTH 128, eff. batch 32 (bs 16 × accum 2), Adafactor,
+lr 3e-4, bf16, 1 epoch. Result: **eval_loss 0.207**, generation fixes errors and
+mostly leaves already-clean text unchanged (~78% of clean inputs untouched).
 
 ## Data pipeline
 

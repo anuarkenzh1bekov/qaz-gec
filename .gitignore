@@ -14,9 +14,13 @@ data/processed/train.jsonl
 
 # Notebook / training outputs
 notebooks/.ipynb_checkpoints/
+notebooks/*.backup.ipynb
 checkpoints/
 runs/
 *.ckpt
+
+# IDE
+.idea/
 
 # Trained model weights (large)
 models/
