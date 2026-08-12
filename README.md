@@ -15,7 +15,7 @@ data/
                test_regression.jsonl                     # clean held-out — "what it cost"
 scripts/       dataset builders (see pipeline below)
 notebooks/     train_qazqec.ipynb — training + inference notebook
-models/        umt5-gec-fixed/best — trained model (gitignored)
+models/        umt5-gec-small/best — trained model (gitignored)
 ```
 
 ## ⚠️ Requirement: transformers < 5
@@ -30,7 +30,7 @@ pure garbage at generation time. This is a library bug, not a modeling issue; on
 
 ```bash
 pip install -r requirements.txt
-jupyter lab notebooks/train_qazqec.ipynb   # train + inference; saves models/umt5-gec-fixed/best
+jupyter lab notebooks/train_qazqec.ipynb   # train + inference; saves models/umt5-gec-small/best
 ```
 
 Config: umt5-small, MAX_LENGTH 128, eff. batch 32 (bs 16 × accum 2), Adafactor,
