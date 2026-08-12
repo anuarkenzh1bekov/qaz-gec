@@ -37,6 +37,57 @@ Config: umt5-small, MAX_LENGTH 128, eff. batch 32 (bs 16 × accum 2), Adafactor,
 lr 3e-4, bf16, 1 epoch. Result: **eval_loss 0.207**, generation fixes errors and
 mostly leaves already-clean text unchanged (~78% of clean inputs untouched).
 
+## Results & cost
+
+### Training metrics (umt5-small, 1 epoch)
+
+| step | train loss | val loss |
+|------|-----------|----------|
+| 1000 | 0.630 | 0.389 |
+| 2000 | 0.488 | 0.284 |
+| 3000 | 0.413 | 0.231 |
+| 4000 | 0.389 | 0.213 |
+| 5000 | 0.369 | **0.207** |
+
+### Held-out results (`test_real` — did it learn to fix?)
+
+| model | char-acc ↑ | exact-match ↑ | clean text kept ↑ |
+|---|---|---|---|
+| raw input (no model) | 0.468 | — | — |
+| raw umt5-small (no fine-tune) | 0.016 | 0.000 | 0.00 |
+| **fine-tuned umt5-small** | **0.522** | **0.083** | **0.78** |
+
+Raw `umt5-small` can't correct at all — it's a span-fill pretrain and emits
+garbage (`......`). The whole skill comes from fine-tuning.
+
+**Before vs after, same input:**
+
+| input (noisy) | raw | fine-tuned | target |
+|---|---|---|---|
+| `…iс-әрекети … техникалык кабілетти … кажет етет.` | `……` | `…iс-әрекеті … техникалық қабілетті … қажет етеді.` | `…іс-әрекеті … қабілетті … қажет етеді.` |
+
+### What we paid for it
+
+- **Over-correction** — the main cost: ~22% of already-clean sentences get
+  needlessly changed (`test_regression`: 78% left untouched).
+- **General ability** — the base model's non-correction skills (QA, arithmetic)
+  are effectively gone; after single-task SFT it only knows "rewrite, fixed."
+
+### Cost to train
+
+- **Hardware**: 1× RTX 5070 (12 GB), bf16, Adafactor, batch 16×2, 1 epoch (~5.3k steps).
+- **Time**: ~12 h · **VRAM**: ~9 GB peak (~11 GB reserved) · **Money**: $0 compute
+  (local GPU), ~$3 on gpt-4o-mini for data (dataset augmentation + `test_real`).
+
+### Where we stopped, and why
+
+- First tried **umt5-base**, but transformers **5.x has a broken UMT5 decoder causal
+  mask** (future tokens leak into past positions → loss collapses to ~0.017,
+  generation is garbage). Fixed by pinning **transformers 4.57.x**.
+- **umt5-base** then scored higher (char-acc 0.60 vs 0.52) but is 2× the size and
+  ~3× slower. With the **deadline closing in**, we settled on **umt5-small** at
+  1 epoch (`eval_loss 0.207`) — good enough, fast, small footprint.
+
 ## Data pipeline
 
 Run from the repo root:
