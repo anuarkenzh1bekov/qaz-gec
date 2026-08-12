@@ -13,7 +13,7 @@ data/processed/train.jsonl
 # reproduced identically — freeze it in git.
 
 # Notebook / training outputs
-notebooks/.ipynb_checkpoints/
+.ipynb_checkpoints/
 notebooks/*.backup.ipynb
 checkpoints/
 runs/
