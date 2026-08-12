@@ -1,20 +1,12 @@
-"""Build a regression test set: clean, held-out Kazakh sentences.
+"""Build a regression test set: clean, held-out Kazakh sentences (input == target).
 
-Goal: measure the *cost* of fine-tuning. We feed the model correct text and
-check whether it wrongly "corrects" what was already fine. So input == target.
+Measures the cost of fine-tuning: does the model wrongly "correct" already-clean
+text? Held-out via the SAME splitting rules as make_dataset.py.
 
-Every sentence here is guaranteed NOT to appear in train/val (held-out), using
-the SAME sentence-splitting rules as make_dataset.py so the comparison is fair.
+Optionally appends a few general (non-correction) tasks to probe whether the
+pretrained model's other skills degraded after SFT.
 
-Output: data/test_regression.jsonl with rows
-    {"input": <clean>, "target": <clean>, "type": "keep"}
-
-Optionally appends a few hand-written general tasks (type "general") that are
-NOT about correction, to see whether the base model's other skills degraded.
-
-Usage:
-    python make_regression.py --csv corrected_small_kazakh_corpus_final.csv \
-        --out data/test_regression.jsonl --n 100
+    python make_regression.py --n 100
 """
 
 import argparse
@@ -28,8 +20,7 @@ import pandas as pd
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-# --- Must match make_dataset.py exactly, or "held-out" is meaningless. -------
-MIN_LEN, MAX_LEN = 30, 400
+MIN_LEN, MAX_LEN = 30, 400   # must match make_dataset.py, else held-out is meaningless
 SENT_SPLIT = re.compile(r"(?<=[.!?…])\s+")
 
 
@@ -58,7 +49,7 @@ def load_used(paths):
     return used
 
 
-# A few non-correction tasks: does the base model still do these after SFT?
+# Non-correction probes: does the model still do these after SFT?
 GENERAL_TASKS = [
     {"input": "Қазақстанның астанасы қай қала?", "target": "Астана", "type": "general"},
     {"input": "Аптада неше күн бар?", "target": "Жеті", "type": "general"},
@@ -88,7 +79,6 @@ def main():
     df = pd.read_csv(args.csv, usecols=["content"])
     print(f"loaded {len(df)} documents")
 
-    # Collect candidate clean sentences that were NOT used in training.
     candidates, seen = [], set()
     for text in df["content"].dropna():
         for s in sentences(str(text)):

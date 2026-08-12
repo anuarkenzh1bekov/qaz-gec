@@ -1,14 +1,9 @@
-"""Build a Kazakh spelling/typo error-correction dataset.
+"""Build a Kazakh typo error-correction dataset from a clean CSV.
 
-Input : a CSV with a `content` column of CLEAN Kazakh text.
-Output: JSONL pairs {"corrupted": <noisy>, "clean": <original>} split into
-        train/val, ready for supervised fine-tuning.
+Clean `content` column -> JSONL {"corrupted", "clean"} pairs, split train/val.
+Errors are synthesized on the clean text, so the model learns noisy -> clean.
 
-The clean corpus is the target. We synthesize the *input* by injecting
-realistic Kazakh errors so the model learns clean -> from -> noisy.
-
-Usage:
-    python make_dataset.py --csv corrected_small_kazakh_corpus_final.csv --out data
+    python make_dataset.py --csv corrected_small_kazakh_corpus_final.csv
 """
 
 import argparse
@@ -20,13 +15,10 @@ from pathlib import Path
 
 import pandas as pd
 
-# Windows consoles default to cp1252 and choke on Cyrillic; force UTF-8 stdout.
-sys.stdout.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8")  # Windows cp1252 chokes on Cyrillic
 
-# --- Error model -----------------------------------------------------------
-
-# The #1 real-world Kazakh error: typing without a Kazakh keyboard layout, so
-# Kazakh-specific letters collapse to their nearest Russian/Latin lookalike.
+# Top real-world Kazakh error: no Kazakh keyboard layout, so Kazakh-specific
+# letters collapse to their nearest Russian/Latin lookalike.
 DEACCENT = {
     "ә": "а", "і": "и", "ң": "н", "ғ": "г", "ү": "у",
     "ұ": "у", "қ": "к", "ө": "о", "һ": "х",
@@ -34,21 +26,16 @@ DEACCENT = {
 DEACCENT.update({k.upper(): v.upper() for k, v in DEACCENT.items()})
 KAZ_LETTERS = "аәбвгғдеёжзиійклмнңоөпрстуұүфхһцчшщъыьэюяқ"
 
-# Per-word probability that a word gets corrupted at all. Kept low so most of
-# a sentence stays clean (mirrors real text: a few mistakes, not garbled).
-P_WORD = 0.22
-# Given a word is corrupted, how the corruption type is chosen.
+P_WORD = 0.22  # per-word corruption prob; low so most of a sentence stays clean
 OP_WEIGHTS = {
-    "deaccent": 0.50,   # ә->а etc. — dominant, most realistic
+    "deaccent": 0.50,   # dominant, most realistic
     "delete": 0.14,
     "transpose": 0.14,
     "duplicate": 0.10,
     "substitute": 0.12,
 }
 
-# Sentence length filter (characters) — keep short, learnable units.
-MIN_LEN, MAX_LEN = 30, 400
-# Cap total examples so training fits the 3h budget.
+MIN_LEN, MAX_LEN = 30, 400   # sentence length filter (chars)
 MAX_EXAMPLES = 120_000
 VAL_FRACTION = 0.02
 
@@ -123,8 +110,7 @@ def sentences(text: str):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="data/raw/corrected_small_kazakh_corpus_final.csv")
-    # code-only (rule-based) corruption is an intermediate; it gets merged with
-    # GPT noise in augment_gpt.py before training.
+    # code-only output is intermediate; merged with GPT noise in augment_gpt.py
     ap.add_argument("--train-out", default="data/interim/code_only.jsonl")
     ap.add_argument("--val-out", default="data/processed/val.jsonl")
     ap.add_argument("--seed", type=int, default=42)

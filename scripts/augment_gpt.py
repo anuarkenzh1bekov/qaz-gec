@@ -1,19 +1,12 @@
-"""Augment the error-correction dataset with GPT-generated realistic noise.
+"""Augment the dataset with GPT-generated human-like noise.
 
-Rule-based corruption (make_dataset.py) covers typos and de-accenting well, but
-it can't produce the *human* mistakes: wrong case/possessive suffixes, phonetic
-spellings, wrongly joined/split words. We ask gpt-4o-mini to corrupt clean
-Kazakh sentences for that 30% slice.
-
-Pipeline:
-    clean sentences pool --> batched GPT corruption --> validated pairs
-    then merge  code(70%) + gpt(30%)  ->  train_augmented.jsonl
-
-Auth: set OPENAI_API_KEY in the environment (never hardcode the key).
+Rule-based corruption (make_dataset.py) can't produce human mistakes: wrong
+suffixes, phonetic spellings, joined/split words. gpt-4o-mini corrupts clean
+sentences for the 30% slice, then merges code(70%) + gpt(30%) -> train.jsonl.
 
     export OPENAI_API_KEY=sk-...
-    python augment_gpt.py                 # full run, ratio-driven
-    python augment_gpt.py --smoke 30      # cheap smoke test first
+    python augment_gpt.py                 # full run
+    python augment_gpt.py --smoke 30      # cheap smoke test
 """
 
 import argparse
@@ -42,8 +35,7 @@ SYSTEM = (
     'mapping each index as a string to its corrupted sentence, e.g. {"1": "...", "2": "..."}.'
 )
 
-# Per-batch error "personas" — rotated across batches so the generated set spans
-# many error modes instead of one average style. Maximizes dataset diversity.
+# Per-batch error "personas", rotated across batches to span many error modes.
 STYLES = [
     "For this batch, focus on missing Kazakh-specific letters replaced by Russian/Latin "
     "lookalikes (ә->а, қ->к, ғ->г, ұ/ү->у, ө->о, ң->н, і->i, һ->х).",
@@ -121,7 +113,7 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
-    # Load OPENAI_API_KEY from a local .env if not already in the environment.
+    # Fall back to a local .env for OPENAI_API_KEY.
     if not os.getenv("OPENAI_API_KEY") and Path(".env").exists():
         for line in Path(".env").read_text(encoding="utf-8").splitlines():
             if line.startswith("OPENAI_API_KEY="):
@@ -137,14 +129,14 @@ def main():
     pool = load_clean_pool(code_path)
     rng.shuffle(pool)
 
-    # How many GPT pairs to reach the target ratio: gpt / (code+gpt) = frac.
+    # GPT pairs needed to hit the target ratio: gpt / (code+gpt) = frac.
     n_target = round(n_code * args.frac / (1 - args.frac))
     if args.max_gpt:
         n_target = min(n_target, args.max_gpt)
     if args.smoke:
         n_target = args.smoke
 
-    # Resume: skip clean sentences we already corrupted in a previous run.
+    # Resume: skip clean sentences already corrupted in a previous run.
     done = set()
     if out_path.exists() and not args.smoke:
         for line in out_path.open(encoding="utf-8"):

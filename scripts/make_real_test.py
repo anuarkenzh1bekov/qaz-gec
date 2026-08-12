@@ -1,22 +1,13 @@
-"""Build a *held-out* error-correction test set with GPT-generated noise.
+"""Build a held-out GPT-noised test set — the "before vs after" table.
 
-This is the set used for the "before vs after" table. To be a fair test (not a
-re-measure of training) it differs from augment_gpt.py on TWO axes:
+Fair test, not a re-measure of training: differs from augment_gpt.py on two axes:
+  1. Source sentences are HELD-OUT (never in train/val).
+  2. Harsher prompt: denser, more varied human mistakes.
 
-  1. Source sentences are HELD-OUT: clean sentences from the CSV that never
-     appear in train/val (same splitting rules as make_dataset.py).
-  2. A different, harsher error prompt: realistic *human* mistakes as a native
-     Kazakh writer would actually make, denser and more varied than training.
+These are GPT-synthesized "realistic" errors, NOT collected from real humans.
 
-Honest label: these are GPT-synthesized "realistic" errors, NOT errors
-collected from real humans. Say so in the write-up.
-
-Output: data/test_real.jsonl with rows
-    {"corrupted": <noisy>, "clean": <held-out original>, "source": "gpt-test"}
-
-Usage:
     python make_real_test.py --n 120 --model gpt-4o-mini
-    python make_real_test.py --smoke 10        # cheap check first
+    python make_real_test.py --smoke 10
 """
 
 import argparse
@@ -34,8 +25,7 @@ from openai import OpenAI
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-# --- Held-out sentence extraction: identical rules to make_dataset.py --------
-MIN_LEN, MAX_LEN = 30, 400
+MIN_LEN, MAX_LEN = 30, 400   # must match make_dataset.py, else held-out is unfair
 SENT_SPLIT = re.compile(r"(?<=[.!?…])\s+")
 
 
@@ -61,8 +51,7 @@ def load_used(paths):
     return used
 
 
-# Deliberately different from augment_gpt.py: denser, more human, and it may
-# touch grammar/word-choice the way a real writer slips — a harder test.
+# Harder than augment_gpt.py: denser, more human, may touch grammar/word-choice.
 SYSTEM = (
     "You simulate how a real, careless native Kazakh writer types on a phone or "
     "keyboard without a proper Kazakh layout. For each numbered clean sentence, "
@@ -153,8 +142,7 @@ def main():
     print(f"held-out clean pool: {len(candidates)}")
 
     rng.shuffle(candidates)
-    # Over-sample source sentences a bit; GPT validation drops some.
-    todo = candidates[: int(n_target * 1.5) + args.batch]
+    todo = candidates[: int(n_target * 1.5) + args.batch]  # over-sample; validation drops some
 
     out_path = Path(args.out)
     out_path.parent.mkdir(exist_ok=True)
